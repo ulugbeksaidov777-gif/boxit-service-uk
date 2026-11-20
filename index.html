@@ -7262,18 +7262,16 @@
       </div>
     </div>
     <form id="quoteForm" class="quote-form">
+      <label>Service<select name="service"><option>House Removals</option><option>Man & Van</option><option>Packing</option><option>Furniture Delivery</option><option>Cleaning</option><option>Handyman</option></select></label>
       <label>Full name<input required name="name" autocomplete="name" /></label>
       <label>Phone number<input required name="phone" type="tel" autocomplete="tel" /></label>
       <div class="form-row">
-        <label>Collection postcode<input required name="pickup" /></label>
+        <label><span id="addressLabel">Collection postcode</span><input required name="pickup" /></label>
         <label>Delivery postcode<input required name="delivery" /></label>
       </div>
-      <div class="form-row">
-        <label>Moving date<input name="date" type="date" /></label>
-        <label>Service<select name="service"><option>House Removals</option><option>Man & Van</option><option>Packing</option><option>Furniture Delivery</option><option>Cleaning</option><option>Handyman</option></select></label>
-      </div>
+      <label>Preferred date<input name="date" type="date" /></label>
       <label>Moving package<select name="package"><option value="">Help me choose</option><option>Basic</option><option>Standard</option><option>Premium</option></select></label>
-      <label>Job details<textarea required name="details" rows="5" placeholder="Items, floors, lifts, dismantling, parking and any other useful details"></textarea></label>
+      <label><span id="detailsLabel">Job details</span><textarea required name="details" rows="5" placeholder="Items, floors, lifts, dismantling, parking and any other useful details"></textarea></label>
       <button class="btn" type="submit">Send via WhatsApp</button>
       <p class="form-note">By sending this enquiry, you agree that BOXIT may contact you about this job.</p>
     </form>
@@ -7320,8 +7318,28 @@
   const quoteForm = document.getElementById('quoteForm');
 
   if (quoteForm) {
+    const fields = quoteForm.elements;
+    const prompts = {
+      Cleaning: 'How many rooms need cleaning? Is it a regular, deep or end-of-tenancy clean?',
+      Handyman: 'What needs assembling, fitting or repairing?',
+      Packing: 'How many rooms need packing? Are there any fragile items?'
+    };
+    function updateFields() {
+      const prompt = prompts[fields.service.value];
+      for (const field of [fields.delivery, fields.namedItem('package')]) {
+        field.disabled = Boolean(prompt);
+        field.closest('label').style.setProperty('display', prompt ? 'none' : 'flex', 'important');
+      }
+      fields.pickup.closest('.form-row').style.gridTemplateColumns = prompt ? '1fr' : '';
+      document.getElementById('addressLabel').textContent = prompt ? 'Job postcode' : 'Collection postcode';
+      fields.details.placeholder = prompt || 'Items, floors, lifts and parking at each address';
+    }
+    fields.service.addEventListener('change', updateFields);
+    updateFields();
     document.querySelectorAll('[data-package]').forEach(link => {
         link.addEventListener('click', () => {
+          fields.service.value = 'House Removals';
+          updateFields();
           quoteForm.elements.namedItem('package').value = link.dataset.package;
         });
       });
@@ -7343,11 +7361,11 @@
         `Phone: ${data.get('phone') || 'Not provided'}`,
         '',
         '📦 *MOVE DETAILS*',
-        `Package: ${data.get('package') || 'Help me choose'}`,
+        ...(fields.delivery.disabled ? [] : [`Package: ${data.get('package') || 'Help me choose'}`]),
           `Service: ${data.get('service') || 'Not selected'}`,
-        `Collection: ${data.get('pickup') || 'Not provided'}`,
-        `Delivery: ${data.get('delivery') || 'Not provided'}`,
-        `Moving date: ${formattedDate}`,
+        `${fields.delivery.disabled ? "Job postcode" : "Collection"}: ${data.get('pickup') || 'Not provided'}`,
+        ...(fields.delivery.disabled ? [] : [`Delivery: ${data.get('delivery')}`]),
+        `Preferred date: ${formattedDate}`,
         '',
         '📝 *JOB DETAILS*',
         `${data.get('details') || 'No additional details provided.'}`,
